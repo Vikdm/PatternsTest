@@ -1,44 +1,80 @@
 package ru.netology;
 
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.filter.log.LogDetail;
-import io.restassured.http.ContentType;
-import io.restassured.specification.RequestSpecification;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
+import static com.codeborne.selenide.Condition.text;
+import static com.codeborne.selenide.Selenide.$;
+import static com.codeborne.selenide.Selenide.open;
+import static ru.netology.DataGenerator.Registration.getRegisteredUser;
+import static ru.netology.DataGenerator.Registration.getUser;
+import static ru.netology.DataGenerator.getRandomLogin;
+import static ru.netology.DataGenerator.getRandomPassword;
 
-// спецификация нужна для того, чтобы переиспользовать настройки в разных запросах
-class AuthTest {
-    private static RequestSpecification requestSpec = new RequestSpecBuilder()
-            .setBaseUri("http://localhost")
-            .setPort(7777)
-            .setAccept(ContentType.JSON)
-            .setContentType(ContentType.JSON)
-            .log(LogDetail.ALL)
-            .build();
 
-    @BeforeAll
-    static void setUpAll() {
-        // сам запрос
-        given() // "дано"
-                .spec(requestSpec) // указываем, какую спецификацию используем
-                .body(new RegistrationDto("vasya", "password", "active")) // передаём в теле объект, который будет преобразован в JSON
-                .when() // "когда"
-                .post("/api/system/users") // на какой путь, относительно BaseUri отправляем запрос
-                .then() // "тогда ожидаем"
-                .statusCode(200); // код 200 OK
+public class AuthTest {
+
+    @BeforeEach
+    void setup() {
+        open("http://localhost:7777/");
     }
 
     @Test
-    public void testReg() {
+    @DisplayName("Should successfully login with active registered user")
+    void shouldSuccessfulLoginIfRegisteredActiveUser() {
+        var registeredUser = getRegisteredUser("active");
+        $("[name='login']").sendKeys(getRandomLogin());
+        $("[name='password']").sendKeys(getRandomPassword());
+        $(".button__text").click();
+        $("[data-test-id=error-notification]").shouldHave(text("Неверно указан логин или пароль"));
 
-        given()
-                .body(new RegistrationDto("vasya", "password", "active")) // передаём в теле объект, который будет преобразован в JSON
-                .when()
-                .post("/api/system/users") // на какой путь, относительно BaseUri отправляем запрос
-                .then() // "тогда ожидаем"
-                .statusCode(200);
     }
+
+    @Test
+    @DisplayName("Should get error message if login with not registered user")
+    void shouldGetErrorIfNotRegisteredUser() {
+        var notRegisteredUser = getUser("active");
+        $("[name='login']").sendKeys(getRandomLogin());
+        $("[name='password']").sendKeys(getRandomPassword());
+        $(".button__text").click();
+        $("[data-test-id=error-notification]").shouldHave(text("Ошибка! Неверно указан логин или пароль"));
+
+    }
+    @Test
+    @DisplayName("Should get error message if login with blocked registered user")
+    void shouldGetErrorIfBlockedUser() {
+        var blockedUser = getRegisteredUser("blocked");
+        $("[name='login']").sendKeys(getRandomLogin());
+        $("[name='password']").sendKeys(getRandomPassword());
+        $(".button__text").click();
+        $("[data-test-id=error-notification]").shouldHave(text("Ошибка! Неверно указан логин или пароль"));
+
+    }
+
+    @Test
+    @DisplayName("Should get error message if login with wrong login")
+    void shouldGetErrorIfWrongLogin() {
+        var registeredUser = getRegisteredUser("active");
+        var wrongLogin = getRandomLogin();
+        $("[name='login']").sendKeys(getRandomLogin());
+        $("[name='password']").sendKeys(getRandomPassword());
+        $(".button__text").click();
+        $("[data-test-id=error-notification]").shouldHave(text("Ошибка! Неверно указан логин или пароль"));
+
+    }
+
+    @Test
+    @DisplayName("Should get error message if login with wrong password")
+    void shouldGetErrorIfWrongPassword() {
+        var registeredUser = getRegisteredUser("active");
+        var wrongPassword = getRandomPassword();
+        $("[name='login']").sendKeys(getRandomLogin());
+        $("[name='password']").sendKeys(getRandomPassword());
+        $(".button__text").click();
+        $("[data-test-id=error-notification]").shouldHave(text("Ошибка! Неверно указан логин или пароль"));
+
+
+    }
+
 }
